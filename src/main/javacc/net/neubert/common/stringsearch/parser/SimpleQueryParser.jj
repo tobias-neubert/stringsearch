@@ -1,0 +1,124 @@
+options
+{
+    LOOKAHEAD = 1;
+}
+
+PARSER_BEGIN(SimpleQueryParser)
+package net.neubert.common.stringsearch.parser;
+
+public class SimpleQueryParser
+{
+}
+PARSER_END(SimpleQueryParser)
+
+SKIP :
+{
+  " "
+| "\r"
+| "\t"
+| "\n"
+}
+
+TOKEN :
+{
+  < #LBRACE: "{" >
+| < #RBRACE: "}" >
+| < #LBRACKET: "[" >
+| < #RBRACKET: "]" >
+| < #SEMICOLON: ";" >
+| < #COLON: ":" >
+| < #COMMA: "," >
+| < #DOT: "."  >
+| < #EQ: "=" >
+| < #DOLLAR: "$" >
+| < #STAR: "*" >
+| < #SLASH: "/" >
+}
+
+TOKEN :
+{
+   <#DIGIT: ["0"-"9"]>
+|  <#LOWER: ["a"-"z"]>
+|  <#UPPER: ["A"-"Z", "_"]>
+|  <#SPECIAL: "!" | "\"" | <STAR> | <DOLLAR> | "%" | <DOT> | "#" | "+" | <COMMA> | "-" | "?" | <SLASH> | <COLON> | <SEMICOLON> | "<" | <EQ> | ">" | "@" | <LBRACKET> | <RBRACKET> | <LBRACE> | <RBRACE> | "`">
+|  <#APOSTROPHE: "'">
+|  <#CHARACTER: " " | <DIGIT> | <LOWER> | <UPPER> | <SPECIAL> | <APOSTROPHE>>
+|  <TEXT: (<CHARACTER>)+>
+}
+
+/* OPERATORS */
+TOKEN:
+{
+  <AND: "&" >
+| <OR: "|" >
+| <NOT: "^" >
+| < LPAREN: "(" >
+| < RPAREN: ")" >
+}
+
+boolean expression(String text):
+{
+  boolean expressionMatch;
+  boolean match;
+}
+{
+  match = term(text)
+  (
+    <OR> expressionMatch = expression(text)
+    {
+      match = match || expressionMatch;
+    }
+  )?
+  {
+    return match;
+  }
+}
+
+boolean term(String text):
+{
+  boolean match;
+  boolean termMatch;
+}
+{
+  match = unary(text)
+  (
+    <AND> termMatch = term(text)
+    {
+      match = match && termMatch;
+    }
+  )?
+  {
+    return match;
+  }
+}
+
+boolean unary(String text):
+{
+  boolean match;
+}
+{
+  match = text(text)
+  {
+    return match;
+  }
+| <NOT> match = text(text)
+  {
+    return !match;
+  }
+}
+
+boolean text(String text):
+{
+  Token token;
+  boolean match;
+}
+{
+  token = <TEXT>
+  {
+    return text.contains(token.toString().trim());
+  }
+| <LPAREN> match = expression(text) <RPAREN>
+  {
+    return match;
+  }
+}
